@@ -19,8 +19,9 @@ def run_moose(dict_user, dict_sample):
     Prepare and run moose simulation.
     '''
     # compute data
-    compute_c(dict_user, dict_sample) # from prepare_pf.py
     compute_kc(dict_user, dict_sample) # from prepare_pf.py
+    compute_c(dict_user, dict_sample) # from prepare_pf.py
+    compute_ed_in_film(dict_user, dict_sample) # from tools.py
 
     # write data
     write_eta_txt(dict_user, dict_sample) # from prepare_pf.py
@@ -30,7 +31,12 @@ def run_moose(dict_user, dict_sample):
 
     # plot data
     if 'tilt' in dict_user['L_figures']:
-        plot_ed(dict_user, dict_sample) # from tools.pys
+        plot_ed(dict_user, dict_sample) # from tools.py
+    if 'tilt_in_film' in dict_user['L_figures']:
+        plot_ed_in_film(dict_user, dict_sample) # from tools.py
+
+    # compute mass
+    compute_mass(dict_user, dict_sample) # from tools.py
 
     # generate .i file
     write_i(dict_user, dict_sample) # in prepare_pf.py
@@ -43,6 +49,10 @@ def run_moose(dict_user, dict_sample):
 
     # read data
     read_vtk(dict_user, dict_sample, last_j_str) # in tools.py
+
+    # compute mass and mass_loss
+    # plot data
+    compute_mass_loss(dict_user, dict_sample, 'moose') # from tools.pys
 
 # ------------------------------------------------------------------------------------------------------------------------------------------ #
 
@@ -57,16 +67,18 @@ def track_front(dict_user, dict_sample):
     for i_x in range(len(dict_sample['x_L'])):
         # search the y coordinate of the front 
         i_y = 0
-        while not (0.5<eta_map[-1-i_y, i_x] and eta_map[-1-i_y-1, i_x]<0.5):
+        while not (0.5<=eta_map[-1-i_y, i_x] and eta_map[-1-i_y-1, i_x]<0.5):
             i_y = i_y + 1
         # linear interpolation
         y_front = (0.5-eta_map[-1-i_y, i_x])/(eta_map[-1-(i_y+1), i_x]-eta_map[-1-i_y, i_x])*(dict_sample['y_L'][i_y+1]-dict_sample['y_L'][i_y])+dict_sample['y_L'][i_y]
         # save in tempo list
         tempo_y_L.append(y_front)
-    # y coordinate of the front
-    y_front = np.mean(tempo_y_L)
+    # save data
+    dict_sample['current_front'] = tempo_y_L
     # tracker
-    dict_user['y_front_L'].append(y_front)
+    dict_user['y_front_L'].append(np.mean(tempo_y_L))
+    dict_user['min_y_front_L'].append(np.min(tempo_y_L))
+    dict_user['max_y_front_L'].append(np.max(tempo_y_L))
 
 # ------------------------------------------------------------------------------------------------------------------------------------------ #
 # Plan
@@ -102,9 +114,6 @@ tic = time.perf_counter()
 
 create_ic(dict_user, dict_sample) # from ic.py
 
-# track interface
-track_front(dict_user, dict_sample)
-
 # Plot
 if 'ic' in dict_user['L_figures']:
     fig, (ax1, ax2) = plt.subplots(1,2,figsize=(16,9))
@@ -121,6 +130,10 @@ if 'ic' in dict_user['L_figures']:
     fig.savefig('plot/map_ic.png')
     plt.close(fig)
 
+# track interface
+track_front(dict_user, dict_sample)
+dict_user['time_L'].append(0)
+
 # ------------------------------------------------------------------------------------------------------------------------------------------ #
 # Compute and apply solid activity
 
@@ -133,7 +146,8 @@ compute_as(dict_user, dict_sample) # from prepare_pf.py
 # Main
 
 dict_sample['i_ite'] = 0
-while dict_sample['i_ite'] < dict_user['n_ite_max']:
+loop_cond = True
+while loop_cond :
     dict_sample['i_ite'] = dict_sample['i_ite'] + 1
 
     # output
@@ -144,6 +158,7 @@ while dict_sample['i_ite'] < dict_user['n_ite_max']:
 
     # track and plot the interface
     track_front(dict_user, dict_sample)
+    dict_user['time_L'].append(dict_user['time_L'][-1]+dict_user['dt_PF']*dict_user['n_t_PF'])
     if 'front' in dict_user['L_figures']:
         plot_front(dict_user, dict_sample) # from tools.py
 
@@ -155,11 +170,27 @@ while dict_sample['i_ite'] < dict_user['n_ite_max']:
     if 'config' in dict_user['L_figures']:
         plot_config(dict_user, dict_sample) # from tools.py
 
+    # check loop conditions
+    if dict_sample['i_ite'] == dict_user['n_ite_max']: # maximum number of iterations
+        loop_cond = False
+        print('\nEnd because of maximum number of iterations reached')
+    if dict_user['min_y_front_L'][-1] < dict_user['y_min'] + dict_user['size_tube']/2: # minimum size of the sample
+        loop_cond = False
+        print('\nEnd because of minimum sample size reached')
+
 # ------------------------------------------------------------------------------------------------------------------------------------------ #
 # Post Processing
 
+# fit the front evolution
 if 'fit' in dict_user['L_figures']:
-    plot_fit(dict_user, dict_sample) # frroom tools.py
+    plot_fit(dict_user, dict_sample) # from tools.py
+
+# compare the size of the front evolution with the mesh and size tube
+m_d_y_front = (dict_user['y_front_L'][0]-dict_user['y_front_L'][-1])/(len(dict_user['y_front_L'])-1)
+print()
+print('Mean Delta y_front:', m_d_y_front)
+print('Mesh size:', dict_user['m_size_mesh'])
+print('Tube size:', dict_user['size_tube'])
 
 # ------------------------------------------------------------------------------------------------------------------------------------------ #
 # close simulation
@@ -186,13 +217,10 @@ if dict_user['save_simulation']:
     os.mkdir('../Data_PressureSolution_Indentation_2D/'+name)
     shutil.copytree('dict', '../Data_PressureSolution_Indentation_2D/'+name+'/dict')
     shutil.copytree('plot', '../Data_PressureSolution_Indentation_2D/'+name+'/plot')
-    shutil.copy('dem.py', '../Data_PressureSolution_Indentation_2D/'+name+'/dem.py')
-    shutil.copy('dem_base.py', '../Data_PressureSolution_Indentation_2D/'+name+'/dem_base.py')
-    shutil.copy('dem_to_pf.py', '../Data_PressureSolution_Indentation_2D/'+name+'/dem_to_pf.py')
     shutil.copy('ic.py', '../Data_PressureSolution_Indentation_2D/'+name+'/ic.py')
     shutil.copy('main.py', '../Data_PressureSolution_Indentation_2D/'+name+'/main.py')
     shutil.copy('Parameters.py', '../Data_PressureSolution_Indentation_2D/'+name+'/Parameters.py')
     shutil.copy('pf_base.i', '../Data_PressureSolution_Indentation_2D/'+name+'/pf_base.i')
-    shutil.copy('pf_to_dem.py', '../Data_PressureSolution_Indentation_2D/'+name+'/pf_to_dem.py')
+    shutil.copy('prepare_pf.py', '../Data_PressureSolution_Indentation_2D/'+name+'/prepare_pf.py')
     shutil.copy('tools.py', '../Data_PressureSolution_Indentation_2D/'+name+'/tools.py')
 

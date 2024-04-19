@@ -17,6 +17,8 @@ def create_ic(dict_user, dict_sample):
     x_L = np.linspace(dict_user['x_min'], dict_user['x_max'], dict_user['n_mesh_x'])
     y_L = np.linspace(dict_user['y_min'], dict_user['y_max'], dict_user['n_mesh_y'])
 
+    print('Mesh size:',len(x_L),'-',len(y_L),'\n')
+
     # ------------------------------------------------------------------------------------------------------------------------------------------ #
     # Create initial phase and solute maps
 
@@ -33,12 +35,12 @@ def create_ic(dict_user, dict_sample):
             y = y_L[i_y]
 
             # eta 
-            if y <= dict_user['d_indenter']-dict_user['w_int']/2 :
+            if y <= dict_user['h_grain']-dict_user['w_int']/2 :
                 eta_map[-1-i_y, i_x] = 1
-            elif dict_user['d_indenter']-dict_user['w_int']/2 < y and y < dict_user['d_indenter']+dict_user['w_int']/2:
-                distance = y-dict_user['d_indenter']
+            elif dict_user['h_grain']-dict_user['w_int']/2 < y and y < dict_user['h_grain']+dict_user['w_int']/2:
+                distance = y-dict_user['h_grain']
                 eta_map[-1-i_y, i_x] = 0.5*(1+math.cos(math.pi*(distance+dict_user['w_int']/2)/dict_user['w_int']))
-            elif dict_user['d_indenter']+dict_user['w_int']/2 <= y :
+            elif dict_user['h_grain']+dict_user['w_int']/2 <= y :
                 eta_map[-1-i_y, i_x] = 0
 
             # solute 

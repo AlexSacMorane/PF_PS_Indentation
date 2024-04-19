@@ -58,6 +58,61 @@ def plot_ed(dict_user, dict_sample):
 
 #------------------------------------------------------------------------------------------------------------------------------------------ #
 
+def compute_ed_in_film(dict_user, dict_sample):
+    '''
+    Plot the tilting term ed in the thin fluid film.
+    '''
+    # init
+    L_ed = []
+    # Iterate on the mesh
+    for i_x in range(dict_user['n_mesh_x']):
+        # search i_y near the front coordinate
+        L_search = list(abs(np.array(dict_sample['y_L']-dict_sample['current_front'][i_x])))
+        i_y = L_search.index(min(L_search))
+        # search data needed
+        c_ij = dict_sample['c_map'][-1-i_y, i_x]
+        as_ij = dict_sample['as_map'][-1-i_y, i_x]
+        # dissolution
+        if c_ij < dict_user['C_eq']*as_ij:
+            ed_ij = dict_user['k_diss']*as_ij*(1-c_ij/(dict_user['C_eq']*as_ij))
+        # precipitation
+        else :
+            ed_ij = dict_user['k_prec']*as_ij*(1-c_ij/(dict_user['C_eq']*as_ij))
+        L_ed.append(ed_ij)
+    # save data
+    dict_user['L_L_ed_in_film'].append(L_ed)
+    dict_user['L_m_ed_in_film'].append(np.mean(L_ed))
+
+#------------------------------------------------------------------------------------------------------------------------------------------ #
+
+def plot_ed_in_film(dict_user, dict_sample):
+    '''
+    Plot the evolution of the profile of the tilting term ed in the thin fluid film and the mean value.
+    '''
+    # plot
+    fig, (ax1) = plt.subplots(1,1,figsize=(16,9))
+    ax1.plot(dict_user['time_L'], dict_user['L_m_ed_in_film'])
+    ax1.set_xlabel('Time (-)')
+    ax1.set_ylabel('Mean ed in the fluid film (-)')
+    fig.tight_layout()
+    fig.savefig('plot/evol_m_ed_film_t.png')
+    plt.close(fig)
+
+    # plot
+    fig, (ax1) = plt.subplots(1,1,figsize=(16,9))
+    for i_L_ed_in_film in range(len(dict_user['L_L_ed_in_film'])):
+        L_ed_in_film = dict_user['L_L_ed_in_film'][i_L_ed_in_film]
+        ax1.plot(dict_sample['x_L'], L_ed_in_film, label='t='+str(dict_user['time_L'][i_L_ed_in_film]))
+    ax1.legend()
+    ax1.set_xlabel('x coordinate (-)')
+    ax1.set_ylabel('Ed in the fluid film (-)')
+    fig.tight_layout()
+    fig.savefig('plot/evol_profile_ed_film_t.png')
+    plt.close(fig)
+
+
+#------------------------------------------------------------------------------------------------------------------------------------------ #
+
 def plot_config(dict_user, dict_sample):
     '''
     Plot the map of the configuration (solute and phase).
@@ -85,11 +140,21 @@ def plot_front(dict_user, dict_sample):
     '''
     # plot
     fig, (ax1) = plt.subplots(1,1,figsize=(16,9))
-    ax1.plot(dict_user['y_front_L'])
-    ax1.set_xlabel('Iteration (-)')
+    ax1.plot(dict_user['time_L'], dict_user['y_front_L'])
+    ax1.set_xlabel('Time (-)')
     ax1.set_ylabel('y coordinate of the front (-)')
     fig.tight_layout()
     fig.savefig('plot/evol_front_t.png')
+    plt.close(fig)
+    
+    # plot
+    fig, (ax1) = plt.subplots(1,1,figsize=(16,9))
+    ax1.plot(dict_user['time_L'], dict_user['min_y_front_L'])
+    ax1.plot(dict_user['time_L'], dict_user['max_y_front_L'])
+    ax1.set_xlabel('Time (-)')
+    ax1.set_ylabel('Minn-Max y coordinate of the front (-)')
+    fig.tight_layout()
+    fig.savefig('plot/evol_min_max_front_t.png')
     plt.close(fig)
 
 #------------------------------------------------------------------------------------------------------------------------------------------ #
@@ -112,25 +177,40 @@ def plot_m_c_well(dict_user, dict_sample):
     ax1.set_xlabel('Iteration (-)')
     ax1.set_ylabel('mean concentration in the well (-)')
     fig.tight_layout()
-    fig.savefig('plot/evol_m_c_weel_t.png')
+    fig.savefig('plot/evol_m_c_weel_ite.png')
+    plt.close(fig)
+
+    # pp data
+    L_sat = []
+    for m_c in dict_user['m_c_well_L']:
+        sat = (m_c-dict_user['C_eq'])/(c_eq_as-dict_user['C_eq'])*100
+        L_sat.append(sat)
+
+    # plot
+    fig, (ax1) = plt.subplots(1,1,figsize=(16,9))
+    ax1.plot(L_sat)
+    ax1.set_xlabel('Iteration (-)')
+    ax1.set_ylabel('saturation in the well (%)')
+    fig.tight_layout()
+    fig.savefig('plot/evol_sat_weel_ite.png')
     plt.close(fig)
 
 #------------------------------------------------------------------------------------------------------------------------------------------ #
 
 def plot_fit(dict_user, dict_sample):
     '''
-    Plot the evolution of the log(strain) - log(Times) and compute a fit (y = ax + b).
+    Plot the evolution of the log(disp) - log(Times) and compute a fit (y = ax + b).
     '''
     # compute the pp data
-    log_strain = []
+    log_disp = []
     log_times = []
     for i in range(1, len(dict_user['y_front_L'])):
-        log_times.append(math.log(i))
-        strain = (dict_user['y_front_L'][0]-dict_user['y_front_L'][i])/dict_user['y_front_L'][0]
-        log_strain.append(math.log(strain))
+        log_times.append(math.log(dict_user['time_L'][i]))
+        disp = (dict_user['y_front_L'][0]-dict_user['y_front_L'][i])
+        log_disp.append(math.log(disp))
 
     # compute the fit
-    coeff, const, corr = lsm_linear(log_strain, log_times)
+    coeff, const, corr = lsm_linear(log_disp, log_times)
     L_fit = []
     # compute fitted Andrade creep law
     for i in range(len(log_times)):
@@ -138,14 +218,14 @@ def plot_fit(dict_user, dict_sample):
 
     # plot
     fig, (ax1) = plt.subplots(1,1,figsize=(16,9))
-    ax1.plot(log_times, log_strain, label='Data')
+    ax1.plot(log_times, log_disp, label='Data')
     ax1.plot(log_times, L_fit, linestyle='dotted', color='k',\
              label='Fit : y = '+str(round(coeff,2))+'x + '+str(round(const,2))+' ('+str(round(corr,2))+')')
-    ax1.set_ylabel(r'log($\epsilon$) (-)')
+    ax1.set_ylabel(r'log(displacement) (-)')
     ax1.set_xlabel('log(Times) (-)')   
     ax1.legend()
     fig.tight_layout()
-    fig.savefig('plot/evol_log_strain_log_t.png')
+    fig.savefig('plot/evol_log_disp_log_t.png')
     plt.close(fig)
 
 # ------------------------------------------------------------------------------------------------------------------------------------------ #
@@ -530,66 +610,18 @@ def read_vtk(dict_user, dict_sample, j_str):
         dict_sample['eta_map'][-1-i_y, i_x] = L_eta[i_XYZ]
         dict_sample['c_map'][-1-i_y, i_x] = L_c[i_XYZ]
 
-
-#------------------------------------------------------------------------------------------------------------------------------------------ #
-
-def plot_sum_mean_etai_c(dict_user, dict_sample):
-    '''
-    Plot figure illustrating the sum and the mean of etai and c.
-    '''
-    # compute tracker
-    dict_user['L_sum_eta_1'].append(np.sum(dict_sample['eta_1_map']))
-    dict_user['L_sum_eta_2'].append(np.sum(dict_sample['eta_2_map']))
-    dict_user['L_sum_c'].append(np.sum(dict_sample['c_map']))
-    dict_user['L_sum_mass'].append(np.sum(dict_sample['eta_1_map'])+np.sum(dict_sample['eta_2_map'])+np.sum(dict_sample['c_map']))
-    dict_user['L_m_eta_1'].append(np.mean(dict_sample['eta_1_map']))
-    dict_user['L_m_eta_2'].append(np.mean(dict_sample['eta_2_map']))
-    dict_user['L_m_c'].append(np.mean(dict_sample['c_map']))
-    dict_user['L_m_mass'].append(np.mean(dict_sample['eta_1_map'])+np.mean(dict_sample['eta_2_map'])+np.mean(dict_sample['c_map']))
-
-    # plot sum eta_i, c
-    if 'sum_etai_c' in dict_user['L_figures']:
-        fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(nrows=2,ncols=2,figsize=(16,9))
-        ax1.plot(dict_user['L_sum_eta_1'])
-        ax1.set_title(r'$\Sigma\eta_1$')
-        ax2.plot(dict_user['L_sum_eta_2'])
-        ax2.set_title(r'$\Sigma\eta_2$')
-        ax3.plot(dict_user['L_sum_c'])
-        ax3.set_title(r'$\Sigma C$')
-        ax4.plot(dict_user['L_sum_mass'])
-        ax4.set_title(r'$\Sigma\eta_1 + \Sigma\eta_2 + \Sigma c$')
-        fig.tight_layout()
-        fig.savefig('plot/sum_etai_c.png')
-        plt.close(fig)
-
-    # plot mean eta_i, c
-    if 'mean_etai_c' in dict_user['L_figures']:
-        fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(nrows=2,ncols=2,figsize=(16,9))
-        ax1.plot(dict_user['L_m_eta_1'])
-        ax1.set_title(r'Mean $\eta_1$')
-        ax2.plot(dict_user['L_m_eta_2'])
-        ax2.set_title(r'Mean $\eta_2$')
-        ax3.plot(dict_user['L_m_c'])
-        ax3.set_title(r'Mean $c$')
-        ax4.plot(dict_user['L_m_mass'])
-        ax4.set_title(r'Mean $\eta_1$ + Mean $\eta_2$ + Mean $c$')
-        fig.tight_layout()
-        fig.savefig('plot/mean_etai_c.png')
-        plt.close(fig)
-
 #------------------------------------------------------------------------------------------------------------------------------------------ #
 
 def compute_mass(dict_user, dict_sample):
     '''
     Compute the mass at a certain time.
      
-    Mass is sum of etai and c.
+    Mass is sum of eta and c.
     '''
     # sum of masses
-    dict_user['sum_eta_1_tempo'] = np.sum(dict_sample['eta_1_map'])
-    dict_user['sum_eta_2_tempo'] = np.sum(dict_sample['eta_2_map'])
+    dict_user['sum_eta_tempo'] = np.sum(dict_sample['eta_map'])
     dict_user['sum_c_tempo'] = np.sum(dict_sample['c_map'])
-    dict_user['sum_mass_tempo'] = np.sum(dict_sample['eta_1_map'])+np.sum(dict_sample['eta_2_map'])+np.sum(dict_sample['c_map'])
+    dict_user['sum_mass_tempo'] = np.sum(dict_sample['eta_map'])+np.sum(dict_sample['c_map'])
     
 #------------------------------------------------------------------------------------------------------------------------------------------ #
 
@@ -601,30 +633,42 @@ def compute_mass_loss(dict_user, dict_sample, tracker_key):
     Mass is sum of etai and c.
     '''
     # delta masses
-    deta1 = np.sum(dict_sample['eta_1_map']) - dict_user['sum_eta_1_tempo']
-    deta2 = np.sum(dict_sample['eta_2_map']) - dict_user['sum_eta_2_tempo']
+    deta = np.sum(dict_sample['eta_map']) - dict_user['sum_eta_tempo']
     dc = np.sum(dict_sample['c_map']) - dict_user['sum_c_tempo']
-    dm = np.sum(dict_sample['eta_1_map'])+np.sum(dict_sample['eta_2_map'])+np.sum(dict_sample['c_map']) - dict_user['sum_mass_tempo']
+    dm = np.sum(dict_sample['eta_map'])+np.sum(dict_sample['c_map']) - dict_user['sum_mass_tempo']
     
     # save
-    dict_user[tracker_key+'_eta1'].append(deta1)
-    dict_user[tracker_key+'_eta2'].append(deta2)
+    dict_user[tracker_key+'_eta'].append(deta)
     dict_user[tracker_key+'_c'].append(dc)
     dict_user[tracker_key+'_m'].append(dm)
 
+    # percentage
+    dict_user[tracker_key+'_eta_p'].append(deta/dict_user['sum_eta_tempo']*100)
+    dict_user[tracker_key+'_c_p'].append(dc/dict_user['sum_c_tempo']*100)
+    dict_user[tracker_key+'_m_p'].append(dm/dict_user['sum_mass_tempo']*100)
+
     # plot
     if 'mass_loss' in dict_user['L_figures']:
-        fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(nrows=2,ncols=2,figsize=(16,9))
-        ax1.plot(dict_user[tracker_key+'_eta1'])
-        ax1.set_title(r'$\eta_1$ loss')
-        ax2.plot(dict_user[tracker_key+'_eta2'])
-        ax2.set_title(r'$\eta_2$ loss')
-        ax3.plot(dict_user[tracker_key+'_c'])
-        ax3.set_title(r'$c$ loss')
-        ax4.plot(dict_user[tracker_key+'_m'])
-        ax4.set_title(r'$\eta_1$ + $\eta_2$ + $c$ loss')
+        fig, (ax1,ax2,ax3) = plt.subplots(nrows=3,ncols=1,figsize=(16,9))
+        ax1.plot(dict_user[tracker_key+'_eta'])
+        ax1.set_title(r'$\eta$ loss (-)')
+        ax2.plot(dict_user[tracker_key+'_c'])
+        ax2.set_title(r'$c$ loss (-)')
+        ax3.plot(dict_user[tracker_key+'_m'])
+        ax3.set_title(r'$\eta$ + $c$ loss (-)')
         fig.tight_layout()
-        fig.savefig('plot/'+tracker_key+'.png')
+        fig.savefig('plot/evol_mass_loss_'+tracker_key+'_ite.png')
+        plt.close(fig)
+
+        fig, (ax1,ax2,ax3) = plt.subplots(nrows=3,ncols=1,figsize=(16,9))
+        ax1.plot(dict_user[tracker_key+'_eta_p'])
+        ax1.set_title(r'$\eta$ loss (%)')
+        ax2.plot(dict_user[tracker_key+'_c_p'])
+        ax2.set_title(r'$c$ loss (%)')
+        ax3.plot(dict_user[tracker_key+'_m_p'])
+        ax3.set_title(r'$\eta$ + $c$ loss (%)')
+        fig.tight_layout()
+        fig.savefig('plot/evol_mass_loss_'+tracker_key+'_p_ite.png')
         plt.close(fig)
 
 #------------------------------------------------------------------------------------------------------------------------------------------ #
@@ -645,99 +689,6 @@ def plot_performances(dict_user, dict_sample):
         ax1.set_xlabel('Iterations (-)')
         fig.tight_layout()
         fig.savefig('plot/performances.png')
-        plt.close(fig)
-
-#------------------------------------------------------------------------------------------------------------------------------------------ #
-
-def plot_disp_strain_andrade(dict_user, dict_sample):
-    '''
-    Plot figure illustrating the displacement, the strain and the fit with the Andrade law.
-    '''
-    # pp time PF
-    for i_dt in range(len(dict_user['L_dt_PF'])):
-        if i_dt == 0:
-            L_t_PF = [dict_user['L_dt_PF'][0]]
-        else:
-            L_t_PF.append(L_t_PF[-1] + dict_user['L_dt_PF'][i_dt])
-
-    # pp displacement
-    L_disp_init = [0]
-    L_disp = [0]
-    L_strain = [0]
-    for i_disp in range(len(dict_user['L_displacement'])):
-        L_disp_init.append(L_disp_init[-1]+dict_user['L_displacement'][i_disp])
-        if i_disp >= 1:
-            L_disp.append(L_disp[-1]+dict_user['L_displacement'][i_disp])
-            L_strain.append(L_strain[-1]+dict_user['L_displacement'][i_disp]/(4*dict_user['radius']))
-    # compute andrade
-    L_andrade = []
-    L_strain_log = []
-    L_t_log = []
-    mean_log_k = 0
-    if len(L_strain) > 1:
-        for i in range(1,len(L_strain)):
-            L_strain_log.append(math.log(abs(L_strain[i])))
-            L_t_log.append(math.log(L_t_PF[i-1]))
-            mean_log_k = mean_log_k + (L_strain_log[-1] - 1/3*L_t_log[-1])
-        mean_log_k = mean_log_k/len(L_strain) # mean k in Andrade creep law
-        # compute fitted Andrade creep law
-        for i in range(len(L_t_log)):
-            L_andrade.append(mean_log_k + 1/3*L_t_log[i])
-    # plot
-    if 'disp_strain_andrade' in dict_user['L_figures'] and dict_sample['i_DEMPF_ite'] > 10:
-        fig, (ax1,ax2,ax3) = plt.subplots(nrows=1,ncols=3,figsize=(16,9))
-        # displacement
-        ax1.plot(L_t_PF, L_disp)
-        ax1.set_title('Displacement (m)')
-        ax1.set_xlabel('PF Times (-)')
-        # strain
-        ax2.plot(L_t_PF, L_strain)
-        ax2.set_title(r'$\epsilon_y$ (-)')
-        ax2.set_xlabel('PF Times (-)')
-        # Andrade
-        ax3.plot(L_t_log, L_strain_log)
-        ax3.plot(L_t_log, L_andrade, color='k', linestyle='dotted')
-        ax3.set_title('Andrade creep law')
-        ax3.set_ylabel(r'log(|$\epsilon_y$|) (-)')
-        ax3.set_xlabel('log(PF Times) (-)')
-        # close
-        fig.tight_layout()
-        fig.savefig('plot/disp_strain_andrade.png')
-        plt.close(fig)
-    # save
-    dict_user['L_disp'] = L_disp
-    dict_user['L_disp_init'] = L_disp_init
-    dict_user['L_strain'] = L_strain
-    dict_user['L_andrade'] = L_andrade
-    dict_user['mean_log_k'] = mean_log_k
-
-#------------------------------------------------------------------------------------------------------------------------------------------ #
-
-def plot_maps_configuration(dict_user, dict_sample):
-    '''
-    Plot figure illustrating the current maps of etai and c.
-    '''
-    # Plot
-    if 'maps' in dict_user['L_figures']:
-        fig, (ax1, ax2, ax3) = plt.subplots(1,3,figsize=(16,9))
-        # eta 1
-        im = ax1.imshow(dict_sample['eta_1_map'], interpolation = 'nearest', extent=(dict_sample['x_L'][0],dict_sample['x_L'][-1],dict_sample['y_L'][0],dict_sample['y_L'][-1]))
-        fig.colorbar(im, ax=ax1)
-        ax1.set_title(r'Map of $\eta_1$',fontsize = 30)
-        # eta 2
-        im = ax2.imshow(dict_sample['eta_2_map'], interpolation = 'nearest', extent=(dict_sample['x_L'][0],dict_sample['x_L'][-1],dict_sample['y_L'][0],dict_sample['y_L'][-1]))
-        fig.colorbar(im, ax=ax2)
-        ax2.set_title(r'Map of $\eta_2$',fontsize = 30)
-        # solute
-        im = ax3.imshow(dict_sample['c_map'], interpolation = 'nearest', extent=(dict_sample['x_L'][0],dict_sample['x_L'][-1],dict_sample['y_L'][0],dict_sample['y_L'][-1]))
-        fig.colorbar(im, ax=ax3)
-        ax3.set_title(r'Map of solute',fontsize = 30)
-        # close
-        fig.tight_layout()
-        if dict_user['print_all_map_config']:
-            fig.savefig('plot/map_etas_solute/'+str(dict_sample['i_DEMPF_ite'])+'.png')
-        else:
-            fig.savefig('plot/map_etas_solute.png')
         plt.close(fig)
 
 #------------------------------------------------------------------------------------------------------------------------------------------ #

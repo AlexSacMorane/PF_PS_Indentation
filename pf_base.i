@@ -170,11 +170,11 @@
   solve_type = 'NEWTON'
 
   l_max_its = 20
-  l_tol = 1.0e-6
-  l_abs_tol = 1.0e-6
+  l_tol =
+  l_abs_tol =
   nl_max_its = 10
-  nl_rel_tol = 1.0e-6
-  nl_abs_tol = 1.0e-6
+  nl_rel_tol =
+  nl_abs_tol =
 
   start_time = 0.0
   end_time   =
