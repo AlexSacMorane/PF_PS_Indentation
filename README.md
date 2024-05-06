@@ -9,4 +9,19 @@ This work is inspired by previous experiments presented in the following papers:
 ## Simulation presentation
 The goal is to simulate the pressure solution phenomena (illustrated by the following scheme) between a grain and an indenter.
 
-![scheme of grain-indenter interaction](image/IndenterExp.png)
+![scheme of grain-indenter interaction](images/IndenterExp.png)
+
+## Technical description
+
+The goal of the phase-field step is to compute the shape of the grains as it evolves with the precipitation/dissolution.
+An Allen-Cahn formulation is used coupled with a solute generation and diffusion. Hence, the conservation of the mass should be verified as precipitation/dissolution occurs.
+
+The [phase-field theory](https://en.wikipedia.org/wiki/Phase-field_model) is based on the mesh of the sample and grains are represented by a phase variable (= 1 if the node is a grain, = 0 else). 
+
+A [documentation](??) for the python script will be available soon.
+
+## What is next ?
+Some next releases are presented here.
+
+- write the online documentation
+- publish an article about the simulation and result
