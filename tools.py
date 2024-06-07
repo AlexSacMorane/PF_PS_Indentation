@@ -18,6 +18,60 @@ def create_folder(name):
 
 #------------------------------------------------------------------------------------------------------------------------------------------ #
 
+def compute_ed_in_film(dict_user, dict_sample):
+    '''
+    Plot the tilting term ed in the thin fluid film.
+    '''
+    # init
+    L_ed = []
+    # Iterate on the mesh
+    for i_x in range(dict_user['n_mesh_x']):
+        # search i_y near the front coordinate
+        L_search = list(abs(np.array(dict_sample['y_L']-dict_sample['current_front'][i_x])))
+        i_y = L_search.index(min(L_search))
+        # search data needed
+        c_ij = dict_sample['c_map'][-1-i_y, i_x]
+        as_ij = dict_sample['as_map'][-1-i_y, i_x]
+        # dissolution
+        if c_ij < dict_user['C_eq']*as_ij:
+            ed_ij = dict_user['k_diss']*as_ij*(1-c_ij/(dict_user['C_eq']*as_ij))
+        # precipitation
+        else :
+            ed_ij = dict_user['k_prec']*as_ij*(1-c_ij/(dict_user['C_eq']*as_ij))
+        L_ed.append(ed_ij)
+    # save data
+    dict_user['L_L_ed_in_film'].append(L_ed)
+    dict_user['L_m_ed_in_film'].append(np.mean(L_ed))
+
+#------------------------------------------------------------------------------------------------------------------------------------------ #
+
+def compute_sat_in_film(dict_user, dict_sample):
+    '''
+    Compute the solute saturation in the thin fluid film.
+    '''
+    # init
+    L_sat = []
+    # Iterate on the mesh
+    for i_x in range(dict_user['n_mesh_x']):
+        L_tempo = []
+        for i_y in range(dict_user['n_mesh_y']):
+            if dict_sample['current_front'][i_x]-dict_user['size_tube']/2 <= dict_sample['y_L'][i_y] and\
+               dict_sample['y_L'][i_y] <= dict_sample['current_front'][i_x]+dict_user['size_tube']/2:
+                # search data needed
+                c_ij = dict_sample['c_map'][-1-i_y, i_x]
+                as_ij = dict_sample['as_map'][-1-i_y, i_x]
+                # compute and save saturation
+                sat = (c_ij-dict_user['C_eq'])/(dict_user['C_eq']*as_ij-dict_user['C_eq'])*100
+                L_tempo.append(sat)
+        # save mean
+        L_sat.append(np.mean(L_tempo))
+
+    # save data
+    dict_user['L_L_sat_in_film'].append(L_sat)
+    dict_user['L_m_sat_in_film'].append(np.mean(L_sat))
+
+#------------------------------------------------------------------------------------------------------------------------------------------ #
+
 def plot_ed(dict_user, dict_sample):
     '''
     Plot the tilting term ed (and Ed).
@@ -58,33 +112,6 @@ def plot_ed(dict_user, dict_sample):
 
 #------------------------------------------------------------------------------------------------------------------------------------------ #
 
-def compute_ed_in_film(dict_user, dict_sample):
-    '''
-    Plot the tilting term ed in the thin fluid film.
-    '''
-    # init
-    L_ed = []
-    # Iterate on the mesh
-    for i_x in range(dict_user['n_mesh_x']):
-        # search i_y near the front coordinate
-        L_search = list(abs(np.array(dict_sample['y_L']-dict_sample['current_front'][i_x])))
-        i_y = L_search.index(min(L_search))
-        # search data needed
-        c_ij = dict_sample['c_map'][-1-i_y, i_x]
-        as_ij = dict_sample['as_map'][-1-i_y, i_x]
-        # dissolution
-        if c_ij < dict_user['C_eq']*as_ij:
-            ed_ij = dict_user['k_diss']*as_ij*(1-c_ij/(dict_user['C_eq']*as_ij))
-        # precipitation
-        else :
-            ed_ij = dict_user['k_prec']*as_ij*(1-c_ij/(dict_user['C_eq']*as_ij))
-        L_ed.append(ed_ij)
-    # save data
-    dict_user['L_L_ed_in_film'].append(L_ed)
-    dict_user['L_m_ed_in_film'].append(np.mean(L_ed))
-
-#------------------------------------------------------------------------------------------------------------------------------------------ #
-
 def plot_ed_in_film(dict_user, dict_sample):
     '''
     Plot the evolution of the profile of the tilting term ed in the thin fluid film and the mean value.
@@ -98,11 +125,21 @@ def plot_ed_in_film(dict_user, dict_sample):
     fig.savefig('plot/evol_m_ed_film_t.png')
     plt.close(fig)
 
+    # compute the plot frequence
+    if len(dict_user['L_L_ed_in_film']) > dict_user['max_plot']:
+        f_plot = len(dict_user['L_L_ed_in_film'])/dict_user['max_plot']
+    else :
+        f_plot = 1
+    # plot index
+    i_plot = 0
+
     # plot
     fig, (ax1) = plt.subplots(1,1,figsize=(16,9))
     for i_L_ed_in_film in range(len(dict_user['L_L_ed_in_film'])):
-        L_ed_in_film = dict_user['L_L_ed_in_film'][i_L_ed_in_film]
-        ax1.plot(dict_sample['x_L'], L_ed_in_film, label='t='+str(dict_user['time_L'][i_L_ed_in_film]))
+        if i_L_ed_in_film >= f_plot*i_plot:
+            L_ed_in_film = dict_user['L_L_ed_in_film'][i_L_ed_in_film]
+            ax1.plot(dict_sample['x_L'], L_ed_in_film, label='t='+str(dict_user['time_L'][i_L_ed_in_film]))
+            i_plot = i_plot + 1
     ax1.legend()
     ax1.set_xlabel('x coordinate (-)')
     ax1.set_ylabel('Ed in the fluid film (-)')
@@ -110,6 +147,42 @@ def plot_ed_in_film(dict_user, dict_sample):
     fig.savefig('plot/evol_profile_ed_film_t.png')
     plt.close(fig)
 
+#------------------------------------------------------------------------------------------------------------------------------------------ #
+
+def plot_sat_in_film(dict_user, dict_sample):
+    '''
+    Plot the evolution of the profile of the saturation in the thin fluid film and the mean value.
+    '''
+    # plot
+    fig, (ax1) = plt.subplots(1,1,figsize=(16,9))
+    ax1.plot(dict_user['time_L'], dict_user['L_m_sat_in_film'])
+    ax1.set_xlabel('Time (-)')
+    ax1.set_ylabel('mean saturation in the fluid film (-)')
+    fig.tight_layout()
+    fig.savefig('plot/evol_m_sat_film_t.png')
+    plt.close(fig)
+
+    # compute the plot frequence
+    if len(dict_user['L_L_sat_in_film']) > dict_user['max_plot']:
+        f_plot = len(dict_user['L_L_sat_in_film'])/dict_user['max_plot']
+    else :
+        f_plot = 1
+    # plot index
+    i_plot = 0
+
+    # plot
+    fig, (ax1) = plt.subplots(1,1,figsize=(16,9))
+    for i_L_sat_in_film in range(len(dict_user['L_L_sat_in_film'])):
+        if i_L_sat_in_film >= f_plot*i_plot:
+            L_sat_in_film = dict_user['L_L_sat_in_film'][i_L_sat_in_film]
+            ax1.plot(dict_sample['x_L'], L_sat_in_film, label='t='+str(dict_user['time_L'][i_L_sat_in_film]))
+            i_plot = i_plot + 1
+    ax1.legend()
+    ax1.set_xlabel('x coordinate (-)')
+    ax1.set_ylabel('saturation in the fluid film (-)')
+    fig.tight_layout()
+    fig.savefig('plot/evol_profile_sat_film_t.png')
+    plt.close(fig)
 
 #------------------------------------------------------------------------------------------------------------------------------------------ #
 
@@ -132,6 +205,24 @@ def plot_config(dict_user, dict_sample):
     fig.savefig('plot/map_config.png')
     plt.close(fig)
 
+    '''# eta
+    fig, (ax1) = plt.subplots(1,1,figsize=(16,9))
+    im = ax1.imshow(dict_sample['eta_map'], interpolation = 'nearest', extent=(dict_sample['x_L'][0],dict_sample['x_L'][-1],dict_sample['y_L'][0],dict_sample['y_L'][-1]))
+    fig.colorbar(im, ax=ax1)
+    ax1.set_title(r'Map of $\eta$',fontsize = 30)
+    fig.tight_layout()
+    fig.savefig('plot/map_eta.png')
+    plt.close(fig)
+
+    # solute
+    fig, (ax1) = plt.subplots(1,1,figsize=(16,9))
+    im = ax1.imshow(dict_sample['c_map'], interpolation = 'nearest', extent=(dict_sample['x_L'][0],dict_sample['x_L'][-1],dict_sample['y_L'][0],dict_sample['y_L'][-1]))
+    fig.colorbar(im, ax=ax1)
+    ax1.set_title(r'Map of $c$',fontsize = 30)
+    fig.tight_layout()
+    fig.savefig('plot/map_solute.png')
+    plt.close(fig)'''
+
 #------------------------------------------------------------------------------------------------------------------------------------------ #
 
 def plot_front(dict_user, dict_sample):
@@ -152,9 +243,83 @@ def plot_front(dict_user, dict_sample):
     ax1.plot(dict_user['time_L'], dict_user['min_y_front_L'])
     ax1.plot(dict_user['time_L'], dict_user['max_y_front_L'])
     ax1.set_xlabel('Time (-)')
-    ax1.set_ylabel('Minn-Max y coordinate of the front (-)')
+    ax1.set_ylabel('Min-Max y coordinate of the front (-)')
     fig.tight_layout()
     fig.savefig('plot/evol_min_max_front_t.png')
+    plt.close(fig)
+
+    # pp data
+    L_delta = []
+    for i in range(len(dict_user['time_L'])):
+        L_delta.append((dict_user['max_y_front_L'][i] - dict_user['min_y_front_L'][i])/dict_user['size_tube']*100)
+
+    # plot
+    fig, (ax1) = plt.subplots(1,1,figsize=(16,9))
+    ax1.plot(dict_user['time_L'], L_delta)
+    ax1.set_xlabel('Time (-)')
+    ax1.set_ylabel('Delta y coordinate of the front / size of the tube (%)')
+    fig.tight_layout()
+    fig.savefig('plot/evol_delta_front_t.png')
+    plt.close(fig)
+
+#------------------------------------------------------------------------------------------------------------------------------------------ #
+
+def plot_eta_profile(dict_user, dict_sample):
+    '''
+    Plot the evolution of the eta profile at the center of x.    
+    '''    
+    # plan figure
+    fig, (ax1, ax2) = plt.subplots(2,1,figsize=(16,9))
+    # search front 
+    tempo_y_L = [] 
+    tempo_x_L = []
+    # iterate on time
+    for i_L_eta in range(len(dict_user['L_L_eta_center'])):
+        L_x = []
+        for i_eta in range(len(dict_user['L_L_eta_center'][i_L_eta])):
+            eta = dict_user['L_L_eta_center'][i_L_eta][-1-i_eta]
+            L_x.append(i_L_eta+eta) 
+        ax1.plot(L_x, dict_sample['y_L'])
+        # search the y coordinate of the front 
+        i_y = 0
+        while not (0.5<=dict_user['L_L_eta_center'][i_L_eta][-1-i_y] and\
+                   dict_user['L_L_eta_center'][i_L_eta][-1-i_y-1]<=0.5):
+            i_y = i_y + 1
+        # linear interpolation
+        y_front = (0.5-dict_user['L_L_eta_center'][i_L_eta][-1-i_y])/(dict_user['L_L_eta_center'][i_L_eta][-1-(i_y+1)]-dict_user['L_L_eta_center'][i_L_eta][-1-i_y])*(dict_sample['y_L'][i_y+1]-dict_sample['y_L'][i_y])+dict_sample['y_L'][i_y]
+        tempo_y_L.append(y_front)
+        tempo_x_L.append(i_L_eta+0.5)
+
+    ax1.plot(tempo_x_L, tempo_y_L, color='k', marker='x', linestyle='dotted')
+    ax1.set_xlabel('Iteration (-)')
+    ax1.set_ylabel(r'y profile of $\eta$ (-)')
+    ax1.set_title('At the center')
+    # search front 
+    tempo_y_L = [] 
+    tempo_x_L = []
+    # iterate on time
+    for i_L_eta in range(len(dict_user['L_L_eta_ext'])):
+        L_x = []
+        for i_eta in range(len(dict_user['L_L_eta_ext'][i_L_eta])):
+            eta = dict_user['L_L_eta_ext'][i_L_eta][-1-i_eta]
+            L_x.append(i_L_eta+eta) 
+        ax2.plot(L_x, dict_sample['y_L'])
+        # search the y coordinate of the front 
+        i_y = 0
+        while not (0.5<=dict_user['L_L_eta_ext'][i_L_eta][-1-i_y] and\
+                   dict_user['L_L_eta_ext'][i_L_eta][-1-i_y-1]<=0.5):
+            i_y = i_y + 1
+        # linear interpolation
+        y_front = (0.5-dict_user['L_L_eta_ext'][i_L_eta][-1-i_y])/(dict_user['L_L_eta_ext'][i_L_eta][-1-(i_y+1)]-dict_user['L_L_eta_ext'][i_L_eta][-1-i_y])*(dict_sample['y_L'][i_y+1]-dict_sample['y_L'][i_y])+dict_sample['y_L'][i_y]
+        tempo_y_L.append(y_front)
+        tempo_x_L.append(i_L_eta+0.5)
+    ax2.plot(tempo_x_L, tempo_y_L, color='k', marker='x', linestyle='dotted')
+    ax2.set_xlabel('Iteration (-)')
+    ax2.set_ylabel(r'y profile of $\eta$ (-)')
+    ax2.set_title('At the extremum')
+    # close
+    fig.tight_layout()
+    fig.savefig('plot/evol_profile_eta_t.png')
     plt.close(fig)
 
 #------------------------------------------------------------------------------------------------------------------------------------------ #
@@ -164,9 +329,9 @@ def plot_m_c_well(dict_user, dict_sample):
     Plot the evolution of the mean concentration of the solute in the well.
     '''
     # compute the solute concentration at the equilibrium considering the solid activity
-    R_gas = 82.06e5 # cm3 Pa K-1 mol-1
-    Temp = 25+278   # K
-    V_m = 27.1      # cm3 mol-1
+    R_gas = dict_user['R_cst'] 
+    Temp = dict_user['temperature']   
+    V_m = dict_user['V_m']
     a_s = math.exp(dict_user['pressure_applied']*V_m/(R_gas*Temp))
     c_eq_as = dict_user['C_eq']*a_s
 
@@ -177,7 +342,7 @@ def plot_m_c_well(dict_user, dict_sample):
     ax1.set_xlabel('Iteration (-)')
     ax1.set_ylabel('mean concentration in the well (-)')
     fig.tight_layout()
-    fig.savefig('plot/evol_m_c_weel_ite.png')
+    #fig.savefig('plot/evol_m_c_weel_ite.png')
     plt.close(fig)
 
     # pp data
@@ -193,6 +358,68 @@ def plot_m_c_well(dict_user, dict_sample):
     ax1.set_ylabel('saturation in the well (%)')
     fig.tight_layout()
     fig.savefig('plot/evol_sat_weel_ite.png')
+    plt.close(fig)
+
+
+#------------------------------------------------------------------------------------------------------------------------------------------ #
+
+def plot_c_removed(dict_user, dict_sample):
+    '''
+    Plot the evolution of the solute removed.
+    '''
+    # pp data 
+    L_p_solute_moved = []
+    for i_L_p_solute_moved in dict_user['L_L_p_solute_moved']:
+        L_p_solute_moved.append(np.mean(i_L_p_solute_moved)*100)
+    s_solute_moved_L_pp = []
+    for s_solute_moved in dict_user['s_solute_moved_L']:
+        s_solute_moved_L_pp.append(s_solute_moved*dict_user['m_size_mesh']**2)
+
+    # solute removed - PF times
+    fig, (ax1) = plt.subplots(1,1,figsize=(16,9))
+    ax1.plot(dict_user['time_L'], s_solute_moved_L_pp, linewidth=6)
+    ax1.set_ylabel(r'solute removed (-)', fontsize=25)
+    ax1.set_xlabel('time (-)', fontsize=25)
+    ax1.tick_params(axis='both', labelsize=20, width=3, length=3)          
+    fig.tight_layout()
+    fig.savefig('plot/evol_sol_removed_times.png')
+    plt.close(fig)
+
+    # percentage solute removed of the fluid - PF times
+    fig, (ax1) = plt.subplots(1,1,figsize=(16,9))
+    ax1.plot(dict_user['time_L'], L_p_solute_moved, linewidth=6)
+    ax1.set_ylabel(r'% solute removed of the saturated value (-)', fontsize=25)
+    ax1.set_xlabel('time (-)', fontsize=25)
+    ax1.tick_params(axis='both', labelsize=20, width=3, length=3)           
+    fig.tight_layout()
+    fig.savefig('plot/evol_sol_removed_p_fluid_times.png')
+    plt.close(fig)
+
+#------------------------------------------------------------------------------------------------------------------------------------------ #
+
+def plot_as(dict_user, dict_sample):
+    '''
+    Plot the evolution of the profile of the solid activity as.
+    '''
+    # compute the plot frequence
+    if len(dict_user['L_L_ed_in_film']) > dict_user['max_plot']:
+        f_plot = len(dict_user['L_L_ed_in_film'])/dict_user['max_plot']
+    else :
+        f_plot = 1
+    # plot index
+    i_plot = 0
+    # plot
+    fig, (ax1) = plt.subplots(1,1,figsize=(16,9))
+    for i_L_as in range(len(dict_user['L_L_as'])):
+        if i_L_as >= f_plot*i_plot:
+            L_as = dict_user['L_L_as'][i_L_as]
+            ax1.plot(dict_sample['x_L'], L_as, label='t='+str(dict_user['time_L'][i_L_as]))
+            i_plot = i_plot + 1
+    ax1.legend()
+    ax1.set_xlabel('x coordinate (-)')
+    ax1.set_ylabel('solid activity as (-)')
+    fig.tight_layout()
+    fig.savefig('plot/evol_profile_as_t.png')
     plt.close(fig)
 
 #------------------------------------------------------------------------------------------------------------------------------------------ #
@@ -401,92 +628,6 @@ def index_to_str(j):
     else :
         return str(j)
 
-#------------------------------------------------------------------------------------------------------------------------------------------ #
-
-def save_mesh_database(dict_user, dict_sample):
-    '''
-    Save mesh database.
-    '''
-    # creating a database
-    if not Path('mesh_map.database').exists():
-        dict_data = {
-        'n_proc': dict_user['n_proc'],
-        'x_min': min(dict_sample['x_L']),
-        'x_max': max(dict_sample['x_L']),
-        'y_min': min(dict_sample['y_L']),
-        'y_max': max(dict_sample['y_L']),
-        'n_mesh_x': len(dict_sample['x_L']),
-        'n_mesh_y': len(dict_sample['y_L']),
-        'L_L_i_XYZ_used': dict_sample['L_L_i_XYZ_used'],
-        'L_XYZ': dict_sample['L_XYZ']
-        }
-        dict_database = {'Run_1': dict_data}
-        with open('mesh_map.database', 'wb') as handle:
-                pickle.dump(dict_database, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    # updating a database
-    else :
-        with open('mesh_map.database', 'rb') as handle:
-            dict_database = pickle.load(handle)
-        dict_data = {
-        'n_proc': dict_user['n_proc'],
-        'x_min': min(dict_sample['x_L']),
-        'x_max': max(dict_sample['x_L']),
-        'y_min': min(dict_sample['y_L']),
-        'y_max': max(dict_sample['y_L']),
-        'n_mesh_x': len(dict_sample['x_L']),
-        'n_mesh_y': len(dict_sample['y_L']),
-        'L_L_i_XYZ_used': dict_sample['L_L_i_XYZ_used'],
-        'L_XYZ': dict_sample['L_XYZ']
-        }   
-        mesh_map_known = False
-        for i_run in range(1,len(dict_database.keys())+1):
-            if dict_database['Run_'+str(int(i_run))] == dict_data:
-                mesh_map_known = True
-        # new entry
-        if not mesh_map_known: 
-            key_entry = 'Run_'+str(int(len(dict_database.keys())+1))
-            dict_database[key_entry] = dict_data
-            with open('mesh_map.database', 'wb') as handle:
-                pickle.dump(dict_database, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-#------------------------------------------------------------------------------------------------------------------------------------------ #
-
-def check_mesh_database(dict_user, dict_sample):
-    '''
-    Check mesh database.
-    '''
-    if Path('mesh_map.database').exists():
-        with open('mesh_map.database', 'rb') as handle:
-            dict_database = pickle.load(handle)
-        dict_data = {
-        'n_proc': dict_user['n_proc'],
-        'x_min': min(dict_sample['x_L']),
-        'x_max': max(dict_sample['x_L']),
-        'y_min': min(dict_sample['y_L']),
-        'y_max': max(dict_sample['y_L']),
-        'n_mesh_x': len(dict_sample['x_L']),
-        'n_mesh_y': len(dict_sample['y_L'])
-        }   
-        mesh_map_known = False
-        for i_run in range(1,len(dict_database.keys())+1):
-            if dict_database['Run_'+str(int(i_run))]['n_proc'] == dict_user['n_proc'] and\
-            dict_database['Run_'+str(int(i_run))]['x_min'] == min(dict_sample['x_L']) and\
-            dict_database['Run_'+str(int(i_run))]['x_max'] == max(dict_sample['x_L']) and\
-            dict_database['Run_'+str(int(i_run))]['y_min'] == min(dict_sample['y_L']) and\
-            dict_database['Run_'+str(int(i_run))]['y_max'] == max(dict_sample['y_L']) and\
-            dict_database['Run_'+str(int(i_run))]['n_mesh_x'] == len(dict_sample['x_L']) and\
-            dict_database['Run_'+str(int(i_run))]['n_mesh_y'] == len(dict_sample['y_L']) :
-                mesh_map_known = True
-                i_known = i_run
-        if mesh_map_known :
-            dict_sample['Map_known'] = True
-            dict_sample['L_L_i_XYZ_used'] = dict_database['Run_'+str(int(i_known))]['L_L_i_XYZ_used']
-            dict_sample['L_XYZ'] = dict_database['Run_'+str(int(i_known))]['L_XYZ']
-        else :
-            dict_sample['Map_known'] = False
-    else :
-        dict_sample['Map_known'] = False
-
 # -----------------------------------------------------------------------------#
 
 def read_vtk(dict_user, dict_sample, j_str):
@@ -619,9 +760,9 @@ def compute_mass(dict_user, dict_sample):
     Mass is sum of eta and c.
     '''
     # sum of masses
-    dict_user['sum_eta_tempo'] = np.sum(dict_sample['eta_map'])
-    dict_user['sum_c_tempo'] = np.sum(dict_sample['c_map'])
-    dict_user['sum_mass_tempo'] = np.sum(dict_sample['eta_map'])+np.sum(dict_sample['c_map'])
+    dict_user['sum_eta_tempo'] = np.sum(dict_sample['eta_map'].copy())
+    dict_user['sum_c_tempo'] = np.sum(dict_sample['c_map'].copy())
+    dict_user['sum_mass_tempo'] = np.sum(dict_sample['eta_map'].copy())+np.sum(dict_sample['c_map'].copy())
     
 #------------------------------------------------------------------------------------------------------------------------------------------ #
 
@@ -633,9 +774,9 @@ def compute_mass_loss(dict_user, dict_sample, tracker_key):
     Mass is sum of etai and c.
     '''
     # delta masses
-    deta = np.sum(dict_sample['eta_map']) - dict_user['sum_eta_tempo']
-    dc = np.sum(dict_sample['c_map']) - dict_user['sum_c_tempo']
-    dm = np.sum(dict_sample['eta_map'])+np.sum(dict_sample['c_map']) - dict_user['sum_mass_tempo']
+    deta = np.sum(dict_sample['eta_map'].copy()) - dict_user['sum_eta_tempo']
+    dc = np.sum(dict_sample['c_map'].copy()) - dict_user['sum_c_tempo']
+    dm = np.sum(dict_sample['eta_map'].copy())+np.sum(dict_sample['c_map'].copy()) - dict_user['sum_mass_tempo']
     
     # save
     dict_user[tracker_key+'_eta'].append(deta)
@@ -657,7 +798,7 @@ def compute_mass_loss(dict_user, dict_sample, tracker_key):
         ax3.plot(dict_user[tracker_key+'_m'])
         ax3.set_title(r'$\eta$ + $c$ loss (-)')
         fig.tight_layout()
-        fig.savefig('plot/evol_mass_loss_'+tracker_key+'_ite.png')
+        #fig.savefig('plot/evol_mass_loss_'+tracker_key+'_ite.png')
         plt.close(fig)
 
         fig, (ax1,ax2,ax3) = plt.subplots(nrows=3,ncols=1,figsize=(16,9))
@@ -671,6 +812,8 @@ def compute_mass_loss(dict_user, dict_sample, tracker_key):
         fig.savefig('plot/evol_mass_loss_'+tracker_key+'_p_ite.png')
         plt.close(fig)
 
+#------------------------------------------------------------------------------------------------------------------------------------------ #
+# Not used for the moment
 #------------------------------------------------------------------------------------------------------------------------------------------ #
 
 def plot_performances(dict_user, dict_sample):
@@ -693,123 +836,87 @@ def plot_performances(dict_user, dict_sample):
 
 #------------------------------------------------------------------------------------------------------------------------------------------ #
 
-def remesh(dict_user, dict_sample):
+def save_mesh_database(dict_user, dict_sample):
     '''
-    Remesh the problem.
-    
-    Eta1, Eta2, c maps are updated
-    x_L, n_mesh_x, y_L, n_mesh_y are updated.
+    Save mesh database.
     '''
-    # search the grain boundaries
-    y_min = dict_sample['y_L'][-1]
-    y_max = dict_sample['y_L'][0]
-    x_min = dict_sample['x_L'][-1]
-    x_max = dict_sample['x_L'][0]
-    # iterate on y
-    for i_y in range(len(dict_sample['y_L'])):
-        if max(dict_sample['eta_1_map'][-1-i_y, :]) > 0.5 or\
-           max(dict_sample['eta_2_map'][-1-i_y, :]) > 0.5:
-            if dict_sample['y_L'][i_y] < y_min : 
-                y_min = dict_sample['y_L'][i_y]
-            if dict_sample['y_L'][i_y] > y_max :
-                y_max = dict_sample['y_L'][i_y]
-    # iterate on x
-    for i_x in range(len(dict_sample['x_L'])):
-        if max(dict_sample['eta_1_map'][:, i_x]) > 0.5 or\
-           max(dict_sample['eta_2_map'][:, i_x]) > 0.5:
-            if dict_sample['x_L'][i_x] < x_min : 
-                x_min = dict_sample['x_L'][i_x]
-            if dict_sample['x_L'][i_x] > x_max :
-                x_max = dict_sample['x_L'][i_x]
-    # compute the domain boundaries (grain boundaries + margins)
-    x_min_dom = x_min - dict_user['margin_mesh_domain']
-    x_max_dom = x_max + dict_user['margin_mesh_domain']
-    y_min_dom = y_min - dict_user['margin_mesh_domain']
-    y_max_dom = y_max + dict_user['margin_mesh_domain']
-    # compute the new x_L and y_L
-    x_L = np.arange(x_min_dom, x_max_dom, dict_user['size_x_mesh'])
-    n_mesh_x = len(x_L)
-    y_L = np.arange(y_min_dom, y_max_dom, dict_user['size_y_mesh'])
-    n_mesh_y = len(y_L)
-    delta_x_max = 0
-    delta_y_max = 0
-    # compute the new maps
-    eta_1_map = np.zeros((n_mesh_y, n_mesh_x))
-    eta_2_map = np.zeros((n_mesh_y, n_mesh_x))
-    c_map = np.ones((n_mesh_y, n_mesh_x))
-    # iterate on lines
-    for i_y in range(len(y_L)):
-        # addition
-        if y_L[i_y] < dict_sample['y_L'][0] or \
-           dict_sample['y_L'][-1] < y_L[i_y]:
-            # iterate on columns
-            for i_x in range(len(x_L)):
-                eta_1_map[-1-i_y, i_x] = 0
-                eta_2_map[-1-i_y, i_x] = 0
-                c_map[-1-i_y, i_x] = 1
-        # extraction
-        else :     
-            # iterate on columns
-            for i_x in range(len(x_L)):
-                # addition
-                if x_L[i_x] < dict_sample['x_L'][0] or \
-                   dict_sample['x_L'][-1] < x_L[i_x]: 
-                    eta_1_map[-1-i_y, i_x] = 0
-                    eta_2_map[-1-i_y, i_x] = 0
-                    c_map[-1-i_y, i_x] = 1
-                # extraction
-                else :
-                    # find nearest node to old node
-                    L_search = list(abs(np.array(dict_sample['x_L']-x_L[i_x])))
-                    i_x_old = L_search.index(min(L_search))
-                    delta_x = min(L_search)
-                    L_search = list(abs(np.array(dict_sample['y_L']-y_L[i_y])))
-                    i_y_old = L_search.index(min(L_search))
-                    delta_y = min(L_search)
-                    # track
-                    if delta_x > delta_x_max:
-                        delta_x_max = delta_x
-                    if delta_y > delta_y_max:
-                        delta_y_max = delta_y
-                    # update
-                    eta_1_map[-1-i_y, i_x] = dict_sample['eta_1_map'][-1-i_y_old, i_x_old]  
-                    eta_2_map[-1-i_y, i_x] = dict_sample['eta_2_map'][-1-i_y_old, i_x_old]  
-                    c_map[-1-i_y, i_x] = dict_sample['c_map'][-1-i_y_old, i_x_old]  
-    # tracking
-    dict_user['L_x_min_dom'].append(min(x_L))
-    dict_user['L_x_max_dom'].append(max(x_L))
-    dict_user['L_y_min_dom'].append(min(y_L))
-    dict_user['L_y_max_dom'].append(max(y_L))
-    dict_user['L_delta_x_max'].append(delta_x_max)
-    dict_user['L_delta_y_max'].append(delta_y_max)
-    # plot 
-    if 'dim_dom' in dict_user['L_figures']:
-        fig, (ax1) = plt.subplots(1,1,figsize=(16,9))
-        ax1.plot(dict_user['L_x_min_dom'], label='x_min')
-        ax1.plot(dict_user['L_x_max_dom'], label='x_max')
-        ax1.plot(dict_user['L_y_min_dom'], label='y_min')
-        ax1.plot(dict_user['L_y_max_dom'], label='y_max')
-        ax1.legend(fontsize=20)
-        ax1.set_title(r'Domain Dimensions',fontsize = 30)
-        fig.tight_layout()
-        fig.savefig('plot/dim_dom.png')
-        plt.close(fig)
+    # creating a database
+    if not Path('mesh_map.database').exists():
+        dict_data = {
+        'n_proc': dict_user['n_proc'],
+        'x_min': min(dict_sample['x_L']),
+        'x_max': max(dict_sample['x_L']),
+        'y_min': min(dict_sample['y_L']),
+        'y_max': max(dict_sample['y_L']),
+        'n_mesh_x': len(dict_sample['x_L']),
+        'n_mesh_y': len(dict_sample['y_L']),
+        'L_L_i_XYZ_used': dict_sample['L_L_i_XYZ_used'],
+        'L_XYZ': dict_sample['L_XYZ']
+        }
+        dict_database = {'Run_1': dict_data}
+        with open('mesh_map.database', 'wb') as handle:
+                pickle.dump(dict_database, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    # updating a database
+    else :
+        with open('mesh_map.database', 'rb') as handle:
+            dict_database = pickle.load(handle)
+        dict_data = {
+        'n_proc': dict_user['n_proc'],
+        'x_min': min(dict_sample['x_L']),
+        'x_max': max(dict_sample['x_L']),
+        'y_min': min(dict_sample['y_L']),
+        'y_max': max(dict_sample['y_L']),
+        'n_mesh_x': len(dict_sample['x_L']),
+        'n_mesh_y': len(dict_sample['y_L']),
+        'L_L_i_XYZ_used': dict_sample['L_L_i_XYZ_used'],
+        'L_XYZ': dict_sample['L_XYZ']
+        }   
+        mesh_map_known = False
+        for i_run in range(1,len(dict_database.keys())+1):
+            if dict_database['Run_'+str(int(i_run))] == dict_data:
+                mesh_map_known = True
+        # new entry
+        if not mesh_map_known: 
+            key_entry = 'Run_'+str(int(len(dict_database.keys())+1))
+            dict_database[key_entry] = dict_data
+            with open('mesh_map.database', 'wb') as handle:
+                pickle.dump(dict_database, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        fig, (ax1) = plt.subplots(1,1,figsize=(16,9))
-        ax1.plot(dict_user['L_delta_x_max'], label=r'max $\Delta$x')
-        ax1.plot(dict_user['L_delta_y_max'], label=r'max $\Delta$y')
-        ax1.legend(fontsize=20)
-        ax1.set_title(r'Interpolation errors',fontsize = 30)
-        fig.tight_layout()
-        fig.savefig('plot/dim_dom_delta.png')
-        plt.close(fig)
-    # save 
-    dict_sample['x_L'] = x_L
-    dict_user['n_mesh_x'] = n_mesh_x
-    dict_sample['y_L'] = y_L
-    dict_user['n_mesh_y'] = n_mesh_y
-    dict_sample['eta_1_map'] = eta_1_map
-    dict_sample['eta_2_map'] = eta_2_map
-    dict_sample['c_map'] = c_map
+#------------------------------------------------------------------------------------------------------------------------------------------ #
 
+def check_mesh_database(dict_user, dict_sample):
+    '''
+    Check mesh database.
+    '''
+    if Path('mesh_map.database').exists():
+        with open('mesh_map.database', 'rb') as handle:
+            dict_database = pickle.load(handle)
+        dict_data = {
+        'n_proc': dict_user['n_proc'],
+        'x_min': min(dict_sample['x_L']),
+        'x_max': max(dict_sample['x_L']),
+        'y_min': min(dict_sample['y_L']),
+        'y_max': max(dict_sample['y_L']),
+        'n_mesh_x': len(dict_sample['x_L']),
+        'n_mesh_y': len(dict_sample['y_L'])
+        }   
+        mesh_map_known = False
+        for i_run in range(1,len(dict_database.keys())+1):
+            if dict_database['Run_'+str(int(i_run))]['n_proc'] == dict_user['n_proc'] and\
+            dict_database['Run_'+str(int(i_run))]['x_min'] == min(dict_sample['x_L']) and\
+            dict_database['Run_'+str(int(i_run))]['x_max'] == max(dict_sample['x_L']) and\
+            dict_database['Run_'+str(int(i_run))]['y_min'] == min(dict_sample['y_L']) and\
+            dict_database['Run_'+str(int(i_run))]['y_max'] == max(dict_sample['y_L']) and\
+            dict_database['Run_'+str(int(i_run))]['n_mesh_x'] == len(dict_sample['x_L']) and\
+            dict_database['Run_'+str(int(i_run))]['n_mesh_y'] == len(dict_sample['y_L']) :
+                mesh_map_known = True
+                i_known = i_run
+        if mesh_map_known :
+            dict_sample['Map_known'] = True
+            dict_sample['L_L_i_XYZ_used'] = dict_database['Run_'+str(int(i_known))]['L_L_i_XYZ_used']
+            dict_sample['L_XYZ'] = dict_database['Run_'+str(int(i_known))]['L_XYZ']
+        else :
+            dict_sample['Map_known'] = False
+    else :
+        dict_sample['Map_known'] = False
                 

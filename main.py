@@ -19,9 +19,11 @@ def run_moose(dict_user, dict_sample):
     Prepare and run moose simulation.
     '''
     # compute data
+    compute_as(dict_user, dict_sample) # from prepare_pf.py
     compute_kc(dict_user, dict_sample) # from prepare_pf.py
     compute_c(dict_user, dict_sample) # from prepare_pf.py
     compute_ed_in_film(dict_user, dict_sample) # from tools.py
+    compute_sat_in_film(dict_user, dict_sample) # from tools.py
 
     # write data
     write_eta_txt(dict_user, dict_sample) # from prepare_pf.py
@@ -34,6 +36,12 @@ def run_moose(dict_user, dict_sample):
         plot_ed(dict_user, dict_sample) # from tools.py
     if 'tilt_in_film' in dict_user['L_figures']:
         plot_ed_in_film(dict_user, dict_sample) # from tools.py
+    if 'as' in dict_user['L_figures']:
+        plot_as(dict_user, dict_sample) # from tools.py
+    if 'sat_in_film' in dict_user['L_figures']:
+        plot_sat_in_film(dict_user, dict_sample) # from tools.py
+    if 'c_removed' in dict_user['L_figures']:
+        plot_c_removed(dict_user, dict_sample) # from tools.py
 
     # compute mass
     compute_mass(dict_user, dict_sample) # from tools.py
@@ -62,12 +70,12 @@ def track_front(dict_user, dict_sample):
     '''
     # initialization
     tempo_y_L = []
-    eta_map = dict_sample['eta_map']
+    eta_map = dict_sample['eta_map'].copy()
     # iterate on the x-axis
     for i_x in range(len(dict_sample['x_L'])):
         # search the y coordinate of the front 
         i_y = 0
-        while not (0.5<=eta_map[-1-i_y, i_x] and eta_map[-1-i_y-1, i_x]<0.5):
+        while not (0.5<=eta_map[-1-i_y, i_x] and eta_map[-1-i_y-1, i_x]<=0.5):
             i_y = i_y + 1
         # linear interpolation
         y_front = (0.5-eta_map[-1-i_y, i_x])/(eta_map[-1-(i_y+1), i_x]-eta_map[-1-i_y, i_x])*(dict_sample['y_L'][i_y+1]-dict_sample['y_L'][i_y])+dict_sample['y_L'][i_y]
@@ -79,6 +87,18 @@ def track_front(dict_user, dict_sample):
     dict_user['y_front_L'].append(np.mean(tempo_y_L))
     dict_user['min_y_front_L'].append(np.min(tempo_y_L))
     dict_user['max_y_front_L'].append(np.max(tempo_y_L))
+
+# ------------------------------------------------------------------------------------------------------------------------------------------ #
+
+def track_eta_profile(dict_user, dict_sample):
+    '''
+    Track the profile of eta at specific points.
+    '''
+    # initialization
+    eta_map = dict_sample['eta_map'].copy()
+    # tracker
+    dict_user['L_L_eta_center'].append(eta_map[:, 0].copy())
+    dict_user['L_L_eta_ext'].append(eta_map[:, -1].copy()) 
 
 # ------------------------------------------------------------------------------------------------------------------------------------------ #
 # Plan
@@ -132,13 +152,9 @@ if 'ic' in dict_user['L_figures']:
 
 # track interface
 track_front(dict_user, dict_sample)
+track_eta_profile(dict_user, dict_sample)
 dict_user['time_L'].append(0)
-
-# ------------------------------------------------------------------------------------------------------------------------------------------ #
-# Compute and apply solid activity
-
-compute_as(dict_user, dict_sample) # from prepare_pf.py
-
+   
 # ------------------------------------------------------------------------------------------------------------------------------------------ #
 # Performances
 
@@ -158,9 +174,12 @@ while loop_cond :
 
     # track and plot the interface
     track_front(dict_user, dict_sample)
+    track_eta_profile(dict_user, dict_sample)
     dict_user['time_L'].append(dict_user['time_L'][-1]+dict_user['dt_PF']*dict_user['n_t_PF'])
     if 'front' in dict_user['L_figures']:
         plot_front(dict_user, dict_sample) # from tools.py
+    if 'eta_profile' in dict_user['L_figures']:
+        plot_eta_profile(dict_user, dict_sample) # from tools.py
 
     # plot tracker on the mean c value in the well
     if 'm_c_well' in dict_user['L_figures']:
@@ -171,10 +190,10 @@ while loop_cond :
         plot_config(dict_user, dict_sample) # from tools.py
 
     # check loop conditions
-    if dict_sample['i_ite'] == dict_user['n_ite_max']: # maximum number of iterations
+    if dict_sample['i_ite'] >= dict_user['n_ite_max']: # maximum number of iterations
         loop_cond = False
         print('\nEnd because of maximum number of iterations reached')
-    if dict_user['min_y_front_L'][-1] < dict_user['y_min'] + dict_user['size_tube']/2: # minimum size of the sample
+    if dict_user['min_y_front_L'][-1] < dict_user['y_min'] + dict_user['size_tube']: # minimum size of the sample
         loop_cond = False
         print('\nEnd because of minimum sample size reached')
 
@@ -188,7 +207,8 @@ if 'fit' in dict_user['L_figures']:
 # compare the size of the front evolution with the mesh and size tube
 m_d_y_front = (dict_user['y_front_L'][0]-dict_user['y_front_L'][-1])/(len(dict_user['y_front_L'])-1)
 print()
-print('Mean Delta y_front:', m_d_y_front)
+print('Total Delta y_front:', dict_user['y_front_L'][0]-dict_user['y_front_L'][-1])
+print('Mean Delta y_front per ite:', m_d_y_front)
 print('Mesh size:', dict_user['m_size_mesh'])
 print('Tube size:', dict_user['size_tube'])
 
