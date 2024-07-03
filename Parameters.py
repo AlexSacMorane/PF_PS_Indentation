@@ -33,26 +33,23 @@ def get_parameters():
     # ic, diff_map, tilt, processor, config
     # front, m_c_well, fit, mass_loss, eta_profile, as
     # tilt_in_film, sat_in_film, c_removed, c_removed_map
-    L_figures = ['front', 'm_c_well', 'config', 'tilt_in_film', 'diff_map', 'sat_in_film', 'as', 'c_removed', 'c_removed_map']
+    # tilt_in_film, sat_in_film, c_removed, c_removed_map
+    L_figures = ['front', 'm_c_well', 'config', 'sat_in_film']
     
     # max profile in plot
     max_plot = 5
 
     # the time stepping and duration of PF simulation
-    dt_PF = (10*24*60*60)/n_time # time step
-    n_t_PF = 5 # number of iterations
+    dt_PF = (1*24*60*60)/n_time # time step
+    n_t_PF = 20 # number of iterations
     # n_t_PF*dt_PF gives the total time duration
-
-    # apply the push_in_out algorithm
-    # c=1 if bool_map=False
-    push_in_out = True
 
     #---------------------------------------------------------------------#
     # Sollicitation
     # the solid activity is computed with as=exp(PV/RT)
 
     # pressure
-    pressure_applied = (100*1e6)/(1/(n_dist*n_time**2)) # (kg m-1 s-2)/(m-1 s-2)
+    pressure_applied = (200*1e6)/(1/(n_dist*n_time**2)) # (kg m-1 s-2)/(m-1 s-2)
     # temperature
     temperature = 623 # K 
     # molar volume
@@ -65,7 +62,7 @@ def get_parameters():
     # monitor, constant
     control_technique = 'monitor'
     # monitor 
-    control_front_factor = 10 #m/m / -
+    control_front_factor = 30 #m/m / -
     # constant adaptation
     #control_front_factor = 0.04
 
@@ -73,14 +70,14 @@ def get_parameters():
     # Indenter description
 
     # the size of grain / indenter
-    d_indenter = (100*1e-6)/n_dist # m/m
-    h_grain = (15*1e-6)/n_dist # m/m
+    d_indenter = (200*1e-6)/n_dist # m/m
+    h_grain = (20*1e-6)/n_dist # m/m
 
     #---------------------------------------------------------------------#
     # Mesh
 
     # size of the mesh
-    m_size_mesh = (d_indenter/20)/15
+    m_size_mesh = (d_indenter/20)/30
 
     #---------------------------------------------------------------------#
     # PF material parameters
@@ -93,6 +90,8 @@ def get_parameters():
     w = m_size_mesh*n_int
     # the gradient coefficient
     kappa_eta = Energy_barrier*w*w/9.86
+    # Mobility
+    mobility = (100*1e-6/(24*60*60))/(n_dist/n_time) # m.s-1/(m.s-1) 
     # the criteria on residual
     crit_res = 1e-7
 
@@ -100,20 +99,16 @@ def get_parameters():
     # Indenter description
 
     # Solute well
-    size_solute_well = 5*m_size_mesh # 
+    size_solute_well = 3*m_size_mesh # 
 
     # Tubes
-    size_tube = (d_indenter/20) # m/m
-    #size_tube = m_size_mesh*(n_int+2) # m/m
-    # this is linked to the diffusivity 
-    L_coordinates_tube = [] 
-    # tubes at x_min and x_max are also added
+    size_tube = (d_indenter/2/10) # m/m
     
     #---------------------------------------------------------------------#
     # Mesh
 
     x_min = 0
-    x_max = d_indenter/2
+    x_max = d_indenter/2 + size_tube
     y_min = 0
     y_max = h_grain + size_solute_well + size_tube
     n_mesh_x = int((x_max-x_min)/m_size_mesh+1)
@@ -122,17 +117,19 @@ def get_parameters():
     #---------------------------------------------------------------------#
     # kinetics of dissolution, precipitation and diffusion
     
-    # it affects the tilting coefficient in Ed
-    k_diss = 0.015*((5e-6)/n_dist/30)/(m_size_mesh) # -
-    k_prec = k_diss/2 # -
-
     # molar concentration at the equilibrium
     C_eq = (0.73*1e3)/(n_mol/n_dist**3) # (mol m-3)/(mol m-3)
-
+    
+    # it affects the tilting coefficient in Ed
+    k_diss = 0.1*((5e-6)/n_dist/30)/(m_size_mesh) # ed_j = ed_i*m_i/m_j
+    k_prec = k_diss/2 # -
+    # here
+    # k_prec = k_diss/C_eq
+    
     # diffusion of the solute
     # linked to the size of the tube
-    #D_solute = (1e-18/size_tube)/(n_dist*n_dist/n_time) # (m2 s-1)/(m2 s-1)
-    D_solute = (1e-19/size_tube)/(n_dist*n_dist/n_time) # (m2 s-1)/(m2 s-1)
+    # (Gratier, 2009): Dw between 2.5-10 1e-19 m3 s-1
+    D_solute = (6e-19/size_tube)/(n_dist*n_dist/n_time) # (m2 s-1)/(m2 s-1)
     
     #---------------------------------------------------------------------#
     # trackers
@@ -172,8 +169,8 @@ def get_parameters():
     'n_max_vtk_files': n_max_vtk_files,
     'L_figures': L_figures,
     'max_plot': max_plot,
-    'push_in_out': push_in_out,
     'kappa_eta': kappa_eta,
+    'mobility': mobility,
     'crit_res': crit_res,
     'n_int': n_int,
     'w_int': w,
@@ -202,7 +199,6 @@ def get_parameters():
     'h_grain': h_grain,
     'size_solute_well': size_solute_well,
     'size_tube': size_tube,
-    'L_coordinates_tube': L_coordinates_tube,
     'y_front_L': y_front_L,
     'min_y_front_L': min_y_front_L,
     'max_y_front_L': max_y_front_L,

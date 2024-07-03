@@ -193,9 +193,10 @@ while loop_cond :
     if dict_sample['i_ite'] >= dict_user['n_ite_max']: # maximum number of iterations
         loop_cond = False
         print('\nEnd because of maximum number of iterations reached')
-    if dict_user['min_y_front_L'][-1] < dict_user['y_min'] + dict_user['size_tube']: # minimum size of the sample
+    if dict_user['min_y_front_L'][-1] < dict_user['y_min'] + 0.8*dict_user['size_tube']: # minimum size of the sample
         loop_cond = False
         print('\nEnd because of minimum sample size reached')
+        print(dict_sample['i_ite'],'iterations done on',dict_user['n_ite_max'],'asked')
 
 # ------------------------------------------------------------------------------------------------------------------------------------------ #
 # Post Processing
@@ -207,10 +208,10 @@ if 'fit' in dict_user['L_figures']:
 # compare the size of the front evolution with the mesh and size tube
 m_d_y_front = (dict_user['y_front_L'][0]-dict_user['y_front_L'][-1])/(len(dict_user['y_front_L'])-1)
 print()
-print('Total Delta y_front:', dict_user['y_front_L'][0]-dict_user['y_front_L'][-1])
-print('Mean Delta y_front per ite:', m_d_y_front)
-print('Mesh size:', dict_user['m_size_mesh'])
-print('Tube size:', dict_user['size_tube'])
+print('Total Delta y_front / grain height (%):', int((dict_user['y_front_L'][0]-dict_user['y_front_L'][-1])/dict_user['h_grain']*100))
+print('Mean delta y_front per ite / Mesh size (%):', int(m_d_y_front/dict_user['m_size_mesh']*100))
+#print('Mesh size:', dict_user['m_size_mesh'])
+#print('Tube size:', dict_user['size_tube'])
 
 # ------------------------------------------------------------------------------------------------------------------------------------------ #
 # close simulation

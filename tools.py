@@ -229,9 +229,17 @@ def plot_front(dict_user, dict_sample):
     '''
     Plot the evolution of the y coordinate of the front.
     '''
+    # pp data
+    time_L_pp = []
+    y_front_L_pp = []
+    for i in range(len(dict_user['time_L'])):
+        time_L_pp.append(dict_user['time_L'][i]*dict_user['n_time'])
+        y_front_L_pp.append((dict_user['y_front_L'][0]-dict_user['y_front_L'][i])*dict_user['n_dist'])
+
     # plot
     fig, (ax1) = plt.subplots(1,1,figsize=(16,9))
-    ax1.plot(dict_user['time_L'], dict_user['y_front_L'])
+    #ax1.plot(dict_user['time_L'], dict_user['y_front_L'])
+    ax1.plot(time_L_pp, y_front_L_pp)
     ax1.set_xlabel('Time (-)')
     ax1.set_ylabel('y coordinate of the front (-)')
     fig.tight_layout()

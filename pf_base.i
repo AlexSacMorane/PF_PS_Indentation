@@ -8,6 +8,8 @@
   ymin =
   ymax =
   elem_type = QUAD4
+  coord_type = RZ # Axisymmetric RZ
+  rz_coord_axis = Y # Which axis the symmetry is around
 []
 
 [GlobalParams]

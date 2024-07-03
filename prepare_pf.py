@@ -134,45 +134,46 @@ def compute_c(dict_user, dict_sample):
   # track solute moved
   s_solute_moved = 0
   L_p_solute_moved = []
-  if dict_user['push_in_out'] :
-    for i_x in range(len(dict_sample['x_L'])):
-      s_solute_moved_i_x = 0 # quantity to move at this x
-      s_solute_moved_fluid_i_x = 0 # quantity to move to fluid at this x
-      L_i_y_fluid = [] # list of i_y corresponding to the fluid
-      for i_y in range(len(dict_sample['y_L'])):
-        # detect if this is the fluid
-        if dict_sample['current_front'][i_x]-dict_user['size_tube']/2 <= dict_sample['y_L'][i_y] and\
-            dict_sample['y_L'][i_y] <= dict_sample['current_front'][i_x]+dict_user['size_tube']/2:
-          L_i_y_fluid.append(i_y)
-        # detection of solute to move
-        if not comb_map[-1-i_y, i_x] and c_map_new[-1-i_y, i_x] != dict_user['C_eq']: # threshold value
-          # compute solute to move
-          solute_to_move = c_map_new[-1-i_y, i_x] - dict_user['C_eq']
-          # detect if this solute must go to the fluid
-          factor = 1.5 # increase the fluid zone
-          if dict_sample['current_front'][i_x]-factor*dict_user['size_tube']/2 <= dict_sample['y_L'][i_y] and\
-             dict_sample['y_L'][i_y] <= dict_sample['current_front'][i_x]+factor*dict_user['size_tube']/2:
-            s_solute_moved_fluid_i_x = s_solute_moved_fluid_i_x + solute_to_move    
-          # reset value to equilibrium
-          c_map_new[-1-i_y, i_x] = dict_user['C_eq']
-          # track
-          s_solute_moved = s_solute_moved + solute_to_move
-          s_solute_moved_i_x = s_solute_moved_i_x + solute_to_move
-          c_removed_map[-1-i_y, i_x] = solute_to_move
-        
-      # iterate on y coordinate of the fluid
-      for i_y in L_i_y_fluid:
-        # move solute in the fluid
-        c_map_new[-1-i_y, i_x] = c_map_new[-1-i_y, i_x] + s_solute_moved_fluid_i_x/len(L_i_y_fluid)
+  # iterate on x coordinate
+  for i_x in range(len(dict_sample['x_L'])):
+    s_solute_moved_i_x = 0 # quantity to move at this x
+    s_solute_moved_fluid_i_x = 0 # quantity to move to fluid at this x
+    L_i_y_fluid = [] # list of i_y corresponding to the fluid
+    # iterate o y coordinate
+    for i_y in range(len(dict_sample['y_L'])):
+      # detect if this is the fluid
+      if dict_sample['current_front'][i_x]-dict_user['size_tube']/2 <= dict_sample['y_L'][i_y] and\
+          dict_sample['y_L'][i_y] <= dict_sample['current_front'][i_x]+dict_user['size_tube']/2:
+        L_i_y_fluid.append(i_y)
+      # detection of solute to move
+      if not comb_map[-1-i_y, i_x] and c_map_new[-1-i_y, i_x] != dict_user['C_eq']: # threshold value
+        # compute solute to move
+        solute_to_move = c_map_new[-1-i_y, i_x] - dict_user['C_eq']
+        # detect if this solute must go to the fluid
+        factor = 1.5 # increase the fluid zone
+        if dict_sample['current_front'][i_x]-factor*dict_user['size_tube']/2 <= dict_sample['y_L'][i_y] and\
+            dict_sample['y_L'][i_y] <= dict_sample['current_front'][i_x]+factor*dict_user['size_tube']/2:
+          s_solute_moved_fluid_i_x = s_solute_moved_fluid_i_x + solute_to_move    
+        # reset value to equilibrium
+        c_map_new[-1-i_y, i_x] = dict_user['C_eq']
         # track
-        c_removed_map[-1-i_y, i_x] = c_removed_map[-1-i_y, i_x] - s_solute_moved_fluid_i_x/len(L_i_y_fluid)
-      # search i_y near the front coordinate
-      L_search = list(abs(np.array(dict_sample['y_L']-dict_sample['current_front'][i_x])))
-      i_y_f = L_search.index(min(L_search))
-      as_ij = dict_sample['as_map'][-1-i_y_f, i_x]
-      # compute tracker
-      p_solute_moved = s_solute_moved_i_x/(dict_user['C_eq']*as_ij)
-      L_p_solute_moved.append(p_solute_moved)
+        s_solute_moved = s_solute_moved + solute_to_move
+        s_solute_moved_i_x = s_solute_moved_i_x + solute_to_move
+        c_removed_map[-1-i_y, i_x] = solute_to_move
+      
+    # iterate on y coordinate of the fluid
+    for i_y in L_i_y_fluid:
+      # move solute in the fluid
+      c_map_new[-1-i_y, i_x] = c_map_new[-1-i_y, i_x] + s_solute_moved_fluid_i_x/len(L_i_y_fluid)
+      # track
+      c_removed_map[-1-i_y, i_x] = c_removed_map[-1-i_y, i_x] - s_solute_moved_fluid_i_x/len(L_i_y_fluid)
+    # search i_y near the front coordinate
+    L_search = list(abs(np.array(dict_sample['y_L']-dict_sample['current_front'][i_x])))
+    i_y_f = L_search.index(min(L_search))
+    as_ij = dict_sample['as_map'][-1-i_y_f, i_x]
+    # compute tracker
+    p_solute_moved = s_solute_moved_i_x/(dict_user['C_eq']*as_ij)
+    L_p_solute_moved.append(p_solute_moved)
   # tracker
   dict_user['s_solute_moved_L'].append(s_solute_moved) 
   dict_user['L_L_p_solute_moved'].append(L_p_solute_moved) 
@@ -267,26 +268,12 @@ def compute_bool_map(dict_user, dict_sample):
   # add tubes
   # iterate on the x coordinates
   for i_x in range(len(dict_sample['x_L'])):
-    # tube at the left
-    #if dict_sample['x_L'][i_x] <= dict_user['x_min'] + dict_user['size_tube']: 
-    #  i_y = 0
-    #  while not comb_map[i_y, i_x]:
-    #    comb_map[i_y, i_x] = True
-    #    i_y = i_y + 1
     # tube at the right
     if dict_user['x_max'] - dict_user['size_tube'] < dict_sample['x_L'][i_x]: 
       i_y = 0
       while not comb_map[i_y, i_x]:
         comb_map[i_y, i_x] = True
         i_y = i_y + 1
-    # other tubes
-    for coordinate_tube in dict_user['L_coordinates_tube']:
-      if coordinate_tube - dict_user['size_tube']/2 <= dict_sample['x_L'][i_x] and \
-          dict_sample['x_L'][i_x] <= coordinate_tube + dict_user['size_tube']/2 : 
-        i_y = 0
-        while not comb_map[i_y, i_x]:
-          comb_map[i_y, i_x] = True
-          i_y = i_y + 1
 
   # add top reservoir
   for i_y in range(len(dict_sample['y_L'])):
@@ -447,17 +434,17 @@ def write_i(dict_user, dict_sample):
       line = line[:-1] + ' ' + str(min(dict_sample['y_L']))+'\n'
     elif j == 9:
       line = line[:-1] + ' ' + str(max(dict_sample['y_L']))+'\n'
-    elif j == 81:
+    elif j == 83:
       line = line[:-1] + "'1 "+str(dict_user['kappa_eta'])+" 1'\n"
-    elif j == 103:
+    elif j == 105:
       line = line[:-1] + ' ' + str(dict_user['Energy_barrier'])+"'\n"
-    elif j == 116:
+    elif j == 118:
       line = line[:-1] + "'" + str(dict_user['C_eq']) + ' ' + str(dict_user['k_diss']) + ' ' + str(dict_user['k_prec']) + "'\n"
-    elif j == 173 or j == 174 or j == 176 or j == 177:
+    elif j == 175 or j == 176 or j == 178 or j == 179:
       line = line[:-1] + ' ' + str(dict_user['crit_res']) +'\n'
-    elif j == 180:
+    elif j == 182:
       line = line[:-1] + ' ' + str(dict_user['dt_PF']*dict_user['n_t_PF']) +'\n'
-    elif j == 184:
+    elif j == 186:
       line = line[:-1] + ' ' + str(dict_user['dt_PF']) +'\n'
     file_to_write.write(line)
 
