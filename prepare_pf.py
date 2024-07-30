@@ -139,7 +139,7 @@ def compute_c(dict_user, dict_sample):
     s_solute_moved_i_x = 0 # quantity to move at this x
     s_solute_moved_fluid_i_x = 0 # quantity to move to fluid at this x
     L_i_y_fluid = [] # list of i_y corresponding to the fluid
-    # iterate o y coordinate
+    # iterate on y coordinate
     for i_y in range(len(dict_sample['y_L'])):
       # detect if this is the fluid
       if dict_sample['current_front'][i_x]-dict_user['size_tube']/2 <= dict_sample['y_L'][i_y] and\
@@ -434,17 +434,19 @@ def write_i(dict_user, dict_sample):
       line = line[:-1] + ' ' + str(min(dict_sample['y_L']))+'\n'
     elif j == 9:
       line = line[:-1] + ' ' + str(max(dict_sample['y_L']))+'\n'
-    elif j == 83:
+    elif j == 70:
+       line = line[:-1] + ' ' + str(1/dict_user['V_m'])+'\n'
+    elif j == 84:
       line = line[:-1] + "'1 "+str(dict_user['kappa_eta'])+" 1'\n"
-    elif j == 105:
+    elif j == 106:
       line = line[:-1] + ' ' + str(dict_user['Energy_barrier'])+"'\n"
-    elif j == 118:
+    elif j == 119:
       line = line[:-1] + "'" + str(dict_user['C_eq']) + ' ' + str(dict_user['k_diss']) + ' ' + str(dict_user['k_prec']) + "'\n"
-    elif j == 175 or j == 176 or j == 178 or j == 179:
+    elif j == 176 or j == 177 or j == 179 or j == 180:
       line = line[:-1] + ' ' + str(dict_user['crit_res']) +'\n'
-    elif j == 182:
+    elif j == 183:
       line = line[:-1] + ' ' + str(dict_user['dt_PF']*dict_user['n_t_PF']) +'\n'
-    elif j == 186:
+    elif j == 187:
       line = line[:-1] + ' ' + str(dict_user['dt_PF']) +'\n'
     file_to_write.write(line)
 

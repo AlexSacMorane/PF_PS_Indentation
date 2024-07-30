@@ -22,7 +22,7 @@ def get_parameters():
     #---------------------------------------------------------------------#
     # Algorithm
 
-    n_ite_max = 100 # number of iterations
+    n_ite_max = 20 # number of iterations
     n_proc = 4 # number of processors used
     j_total = 0 # index global of results
     save_simulation = False # indicate if the simulation is saved
@@ -40,8 +40,8 @@ def get_parameters():
     max_plot = 5
 
     # the time stepping and duration of PF simulation
-    dt_PF = (1*24*60*60)/n_time # time step
-    n_t_PF = 20 # number of iterations
+    dt_PF = (2*24*60*60)/n_time # time step
+    n_t_PF = 10 # number of iterations
     # n_t_PF*dt_PF gives the total time duration
 
     #---------------------------------------------------------------------#
@@ -49,7 +49,7 @@ def get_parameters():
     # the solid activity is computed with as=exp(PV/RT)
 
     # pressure
-    pressure_applied = (200*1e6)/(1/(n_dist*n_time**2)) # (kg m-1 s-2)/(m-1 s-2)
+    pressure_applied = (150*1e6)/(1/(n_dist*n_time**2)) # (kg m-1 s-2)/(m-1 s-2)
     # temperature
     temperature = 623 # K 
     # molar volume
@@ -77,7 +77,7 @@ def get_parameters():
     # Mesh
 
     # size of the mesh
-    m_size_mesh = (d_indenter/20)/30
+    m_size_mesh = (d_indenter/2/10)/30
 
     #---------------------------------------------------------------------#
     # PF material parameters
@@ -93,7 +93,7 @@ def get_parameters():
     # Mobility
     mobility = (100*1e-6/(24*60*60))/(n_dist/n_time) # m.s-1/(m.s-1) 
     # the criteria on residual
-    crit_res = 1e-7
+    crit_res = 1e-8
 
     #---------------------------------------------------------------------#
     # Indenter description
@@ -121,7 +121,7 @@ def get_parameters():
     C_eq = (0.73*1e3)/(n_mol/n_dist**3) # (mol m-3)/(mol m-3)
     
     # it affects the tilting coefficient in Ed
-    k_diss = 0.1*((5e-6)/n_dist/30)/(m_size_mesh) # ed_j = ed_i*m_i/m_j
+    k_diss = 0.06*((5e-6)/n_dist/30)/(m_size_mesh) # ed_j = ed_i*m_i/m_j
     k_prec = k_diss/2 # -
     # here
     # k_prec = k_diss/C_eq
@@ -129,7 +129,7 @@ def get_parameters():
     # diffusion of the solute
     # linked to the size of the tube
     # (Gratier, 2009): Dw between 2.5-10 1e-19 m3 s-1
-    D_solute = (6e-19/size_tube)/(n_dist*n_dist/n_time) # (m2 s-1)/(m2 s-1)
+    D_solute = (6e-15/size_tube)/(n_dist*n_dist/n_time) # (m2 s-1)/(m2 s-1)
     
     #---------------------------------------------------------------------#
     # trackers

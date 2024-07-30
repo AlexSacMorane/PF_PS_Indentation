@@ -64,9 +64,10 @@
     variable = c
   [../]
   [./eta_c]
-    type = CoupledTimeDerivative
+    type = CoefCoupledTimeDerivative
     v = 'eta'
     variable = c
+    coef = 
   [../]
   [./c_diffusion]
     type = ACInterface
