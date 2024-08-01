@@ -596,6 +596,7 @@ def sort_files(dict_user, dict_sample):
         <VTKFile type="PUnstructuredGrid" version="0.1" byte_order="LittleEndian" header_type="UInt32" compressor="vtkZLibDataCompressor">
         \t<PUnstructuredGrid GhostLevel="1">
         \t\t<PPointData>
+        \t\t\t<PDataArray type="Int32" Name="libmesh_node_id"/>
         \t\t\t<PDataArray type="Float64" Name="as"/>
         \t\t\t<PDataArray type="Float64" Name="kc"/>
         \t\t\t<PDataArray type="Float64" Name="eta"/>
@@ -608,7 +609,7 @@ def sort_files(dict_user, dict_sample):
         \t\t</PCellData>
         \t\t<PPoints>
         \t\t\t<PDataArray type="Float64" Name="Points" NumberOfComponents="3"/>
-        \t\t</PPoints>''')
+        \t\t</PPoints>\n''')
         line = ''
         for i_proc in range(dict_user['n_proc']):
             line = line + '''\t\t<Piece Source="pf_'''+j_total_str+'''_'''+str(i_proc)+'''.vtu"/>\n'''
@@ -634,6 +635,7 @@ def sort_files(dict_user, dict_sample):
         <VTKFile type="PUnstructuredGrid" version="0.1" byte_order="LittleEndian" header_type="UInt32" compressor="vtkZLibDataCompressor">
         \t<PUnstructuredGrid GhostLevel="1">
         \t\t<PPointData>
+        \t\t\t<PDataArray type="Int32" Name="libmesh_node_id"/>
         \t\t\t<PDataArray type="Float64" Name="as"/>
         \t\t\t<PDataArray type="Float64" Name="kc"/>
         \t\t\t<PDataArray type="Float64" Name="eta"/>
@@ -646,7 +648,7 @@ def sort_files(dict_user, dict_sample):
         \t\t</PCellData>
         \t\t<PPoints>
         \t\t\t<PDataArray type="Float64" Name="Points" NumberOfComponents="3"/>
-        \t\t</PPoints>''')
+        \t\t</PPoints>\n''')
         line = ''
         for i_proc in range(dict_user['n_proc']):
             line = line + '''\t\t<Piece Source="movie_'''+j_movie_str+'''_'''+str(i_proc)+'''.vtu"/>\n'''
