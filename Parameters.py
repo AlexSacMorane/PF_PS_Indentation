@@ -25,6 +25,7 @@ def get_parameters():
     n_ite_max = 20 # number of iterations
     n_proc = 4 # number of processors used
     j_total = 0 # index global of results
+    j_movie = 0 # index global of results
     save_simulation = False # indicate if the simulation is saved
     n_max_vtk_files = 2 # maximum number of vtk files (can be None to save all files)
 
@@ -164,6 +165,7 @@ def get_parameters():
     'n_ite_max': n_ite_max,
     'n_proc': n_proc,
     'j_total': j_total,
+    'j_movie': j_movie,
     'save_simulation': save_simulation,
     'n_max_vtk_files': n_max_vtk_files,
     'L_figures': L_figures,
