@@ -30,7 +30,7 @@ def get_parameters():
 
     # Select Figures to plot
     # Available:
-    # ic, diff_map, tilt, processor, config
+    # ic, diff_map, tilt, processor, config, movie
     # front, m_c_well, fit, mass_loss, eta_profile, as
     # tilt_in_film, sat_in_film, c_removed, c_removed_map
     L_figures = ['front', 'm_c_well', 'config', 'sat_in_film']
