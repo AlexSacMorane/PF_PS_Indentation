@@ -33,7 +33,6 @@ def get_parameters():
     # ic, diff_map, tilt, processor, config
     # front, m_c_well, fit, mass_loss, eta_profile, as
     # tilt_in_film, sat_in_film, c_removed, c_removed_map
-    # tilt_in_film, sat_in_film, c_removed, c_removed_map
     L_figures = ['front', 'm_c_well', 'config', 'sat_in_film']
     
     # max profile in plot
