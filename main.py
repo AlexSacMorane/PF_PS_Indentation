@@ -230,6 +230,11 @@ seconds = int(tac-tic - hours*60*60 - minutes*60)
 print("\nSimulation time : "+str(hours)+" hours "+str(minutes)+" minutes "+str(seconds)+" seconds")
 print('Simulation ends')
 
+# fast pp
+time_end = dict_user['time_L'][-1]*dict_user['n_time']
+y_front_end = (dict_user['y_front_L'][0]-dict_user['y_front_L'][-1])*dict_user['n_dist']
+print('\n Estimated kinetic:', y_front_end/time_end,'m/s')
+
 # sort files
 reduce_n_vtk_files(dict_user, dict_sample) # from tools.py
 

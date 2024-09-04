@@ -41,6 +41,16 @@ def create_ic(dict_user, dict_sample):
     # iteration on x
     for i_x in range(len(x_L)):
         x = x_L[i_x]
+        if dict_user['adapt_ic']:
+            # look for x in L_adapt_x_ic
+            i_adapt_x_ic = 0
+            while not (dict_user['L_adapt_x_ic'][i_adapt_x_ic] <= x and x <= dict_user['L_adapt_x_ic'][i_adapt_x_ic+1]):
+                i_adapt_x_ic = i_adapt_x_ic + 1
+            # read data 
+            f_a_s_m = dict_user['L_adapt_as_ic'][i_adapt_x_ic]
+            f_a_s_p = dict_user['L_adapt_as_ic'][i_adapt_x_ic+1]
+            x_m = dict_user['L_adapt_x_ic'][i_adapt_x_ic]
+            x_p = dict_user['L_adapt_x_ic'][i_adapt_x_ic+1]
         # iteration on y
         for i_y in range(len(y_L)):
             y = y_L[i_y]
@@ -58,6 +68,9 @@ def create_ic(dict_user, dict_sample):
             # system at the equilibrium initialy
             if dict_user['control_technique'] == 'constant':
                 a_s_ij = a_s_p + (a_s_m-a_s_p)*(x-x_L[0])/(x_L[-1]-x_L[0])
+            elif dict_user['adapt_ic']:
+                f_as = f_a_s_p + (f_a_s_m-f_a_s_p)*(x-x_m)/(x_p-x_m)
+                a_s_ij = a_s*f_as
             else :
                 a_s_ij = a_s
             if dict_user['h_grain']-dict_user['size_tube']/2 <= y and y <= dict_user['h_grain']+dict_user['size_tube']/2:
